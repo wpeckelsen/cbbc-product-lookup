@@ -30,6 +30,16 @@ npm start                # node dist/server.js
    **private** internal URL (no egress fees). Do **not** use the public URL.
 4. Railway assigns a public URL; optionally attach a custom domain.
 
+## Authentication
+
+The UI is protected by **HTTP Basic Auth** when `AUTH_USER` and `AUTH_PASS` are
+both set (recommended in prod). Set them as environment variables in Railway.
+
+- If both are **empty**, auth is disabled (open access) — fine for local dev.
+- If set, the browser prompts for a username/password before serving the page
+  or any data.
+- `/api/health` is always open (it returns nothing sensitive).
+
 ## API
 
 - `GET /api/search?q=<barcode|sku|name>` → `{ query, results: [...] }`
