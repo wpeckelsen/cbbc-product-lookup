@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Product Lookup</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      margin: 0; padding: 2rem; background: #f6f7f9; color: #1a1a1a;
+    }
+    main { max-width: 760px; margin: 0 auto; }
+    h1 { margin: 0 0 0.25rem; font-size: 1.6rem; }
+    .subtitle { margin: 0 0 1.5rem; color: #666; }
+    form { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
+    input {
+      flex: 1; padding: 0.65rem 0.9rem; font-size: 1rem;
+      border: 1px solid #ccc; border-radius: 6px;
+    }
+    button {
+      padding: 0.65rem 1.1rem; font-size: 1rem; cursor: pointer;
+      background: #2563eb; color: #fff; border: none; border-radius: 6px;
+    }
+    button:hover { background: #1d4ed8; }
+    .card {
+      background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
+      padding: 1rem 1.25rem; margin-bottom: 1rem;
+    }
+    .card h3 { margin: 0 0 0.25rem; font-size: 1.05rem; }
+    .meta { color: #666; font-size: 0.85rem; margin: 0 0 0.6rem; }
+    .badge {
+      display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px;
+      font-size: 0.75rem; font-weight: 600;
+    }
+    .badge.live { background: #dcfce7; color: #15803d; }
+    .badge.rejected { background: #fee2e2; color: #b91c1c; }
+    .step { padding: 0.35rem 0; border-top: 1px solid #f0f0f0; font-size: 0.9rem; }
+    .step:first-child { border-top: none; }
+    .ok { color: #15803d; }
+    .fail { color: #b91c1c; }
+    .reason { color: #555; }
+    .empty { color: #666; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Product Lookup</h1>
+    <p class="subtitle">Search by barcode, SKU, or name to see a product's pipeline status.</p>
+    <form id="search-form">
+      <input id="q" type="text" placeholder="Barcode, SKU, or name…" autofocus />
+      <button type="submit">Search</button>
+    </form>
+    <div id="results"></div>
+  </main>
+
+  <script>
+    const STAGE_LABELS = {
+      brand_filter: 'Brand filter',
+      parent_pre_screen: 'Parent pre-screen',
+      consistency: 'Consistency check',
+      eligibility: 'Eligibility',
+      model_cap: 'Model cap',
+      stale_cleanup: 'Stale cleanup',
+      promoted: 'Promoted'
+    };
+
+    const REASON_LABELS = {
+      brand_not_whitelisted: 'Brand is not in the approved list',
+      no_product_code: 'Missing product code',
+      no_name: 'Missing name',
+      no_brand: 'Missing brand',
+      no_vendor: 'Missing vendor',
+      no_categories: 'Missing categories',
+      invalid_barcode: 'Invalid barcode',
+      no_price: 'No price',
+      no_stock: 'No stock',
+      no_image: 'No image',
+      validation_errors: 'Failed validation',
+      inconsistent_variant: 'Conflicts with the parent model (brand / vendor / category)',
+      model_cap: 'Beyond the model limit',
+      removed_stale: 'No longer in the feed'
+    };
+
+    const stageLabel = (s) => STAGE_LABELS[s] || s;
+    const reasonLabel = (r) => REASON_LABELS[r] || r;
+
+    function stepHtml(step) {
+      if (step.outcome === 'passed') {
+        return `<div class="step"><span class="ok">✓</span> ${stageLabel(step.stage)}</div>`;
+      }
+      const reason = step.reason ? ` — <span class="reason">${reasonLabel(step.reason)}</span>` : '';
+      return `<div class="step"><span class="fail">✗</span> ${stageLabel(step.stage)}${reason}</div>`;
+    }
+
+    function cardHtml(r) {
+      const isLive = r.status === 'promoted';
+      const badge = isLive
+        ? '<span class="badge live">LIVE</span>'
+        : '<span class="badge rejected">FILTERED OUT</span>';
+      const meta = [r.barcode ? `Barcode: ${r.barcode}` : null, `SKU: ${r.product_code}`, r.vendor_name || null]
+        .filter(Boolean).join(' · ');
+      const steps = (r.journey || []).map(stepHtml).join('');
+      return `
+        <div class="card">
+          <h3>${r.name_en || '(no name)'} ${badge}</h3>
+          <p class="meta">${meta}</p>
+          ${steps}
+        </div>`;
+    }
+
+    function render(data) {
+      const box = document.getElementById('results');
+      if (!data.results || data.results.length === 0) {
+        box.innerHTML = '<p class="empty">No results found.</p>';
+        return;
+      }
+      box.innerHTML = data.results.map(cardHtml).join('');
+    }
+
+    async function doSearch(e) {
+      e.preventDefault();
+      const q = document.getElementById('q').value.trim();
+      if (!q) return;
+      const box = document.getElementById('results');
+      box.innerHTML = '<p class="empty">Searching…</p>';
+      try {
+        const res = await fetch('/api/search?q=' + encodeURIComponent(q));
+        render(await res.json());
+      } catch (err) {
+        box.innerHTML = '<p class="empty">Search failed.</p>';
+      }
+    }
+
+    document.getElementById('search-form').addEventListener('submit', doSearch);
+  </script>
+</body>
+</html>
