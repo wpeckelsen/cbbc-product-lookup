@@ -402,7 +402,7 @@
 
     async function doRemove(key) {
       const ok = confirm(
-        'Remove this brand? WARNING: its products will be dropped on the next pipeline run and DELETED from the live Shopify store.'
+        'Do you want to remove this brand? WARNING: all products of this brand will be dropped on the next pipeline run and therefore DELETED from the live Shopify store. You can always add it again'
       );
       if (!ok) return;
       try {
