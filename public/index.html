@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Product Lookup</title>
+  <title>CBBC Admin</title>
   <style>
     :root { color-scheme: light; }
     * { box-sizing: border-box; }
@@ -11,9 +11,27 @@
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       margin: 0; padding: 2rem; background: #f6f7f9; color: #1a1a1a;
     }
-    main { max-width: 760px; margin: 0 auto; }
-    h1 { margin: 0 0 0.25rem; font-size: 1.6rem; }
+    main { max-width: 860px; margin: 0 auto; }
+    h1 { margin: 0 0 1rem; font-size: 1.6rem; }
     .subtitle { margin: 0 0 1.5rem; color: #666; }
+    .hidden { display: none; }
+
+    .tabs { display: flex; gap: 0.5rem; border-bottom: 1px solid #e5e7eb; margin-bottom: 1.5rem; }
+    .tab {
+      padding: 0.6rem 1.1rem; font-size: 1rem; cursor: pointer;
+      background: transparent; color: #333; border: none;
+      border-bottom: 2px solid transparent;
+    }
+    .tab:hover { color: #2563eb; }
+    .tab.active { color: #2563eb; border-bottom-color: #2563eb; font-weight: 600; }
+
+    .subtabs { display: flex; gap: 0.35rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .subtab {
+      padding: 0.45rem 0.9rem; font-size: 0.9rem; cursor: pointer;
+      background: #fff; color: #333; border: 1px solid #ccc; border-radius: 6px;
+    }
+    .subtab.active { background: #2563eb; color: #fff; border-color: #2563eb; }
+
     form { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; }
     input {
       flex: 1; padding: 0.65rem 0.9rem; font-size: 1rem;
@@ -24,35 +42,88 @@
       background: #2563eb; color: #fff; border: none; border-radius: 6px;
     }
     button:hover { background: #1d4ed8; }
+    button.small { padding: 0.3rem 0.7rem; font-size: 0.82rem; }
+    button.danger { background: #dc2626; }
+    button.danger:hover { background: #b91c1c; }
+
     .card {
       background: #fff; border: 1px solid #e5e7eb; border-radius: 8px;
       padding: 1rem 1.25rem; margin-bottom: 1rem;
     }
     .card h3 { margin: 0 0 0.25rem; font-size: 1.05rem; }
     .meta { color: #666; font-size: 0.85rem; margin: 0 0 0.6rem; }
+
     .badge {
       display: inline-block; padding: 0.15rem 0.55rem; border-radius: 999px;
       font-size: 0.75rem; font-weight: 600;
     }
     .badge.live { background: #dcfce7; color: #15803d; }
     .badge.rejected { background: #fee2e2; color: #b91c1c; }
+    .badge.warn { background: #fef3c7; color: #b45309; }
+
     .step { padding: 0.35rem 0; border-top: 1px solid #f0f0f0; font-size: 0.9rem; }
     .step:first-child { border-top: none; }
     .ok { color: #15803d; }
     .fail { color: #b91c1c; }
     .reason { color: #555; }
     .empty { color: #666; }
+
+    .brand-row {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 1rem; padding: 0.6rem 0; border-top: 1px solid #f0f0f0;
+    }
+    .brand-row:first-child { border-top: none; }
+    .brand-name { font-weight: 500; }
+    .brand-key { color: #888; font-size: 0.8rem; margin-left: 0.5rem; }
+    .brand-actions { display: flex; gap: 0.4rem; align-items: center; flex-shrink: 0; }
+
+    .warning-banner {
+      background: #fef3c7; color: #92400e; border: 1px solid #fcd34d;
+      border-radius: 8px; padding: 0.75rem 1rem; margin-bottom: 1rem; font-size: 0.9rem;
+    }
+
+    .event { padding: 0.5rem 0; border-top: 1px solid #f0f0f0; font-size: 0.9rem; }
+    .event:first-child { border-top: none; }
+    .event .when { color: #888; font-size: 0.8rem; }
+    .event-add { color: #15803d; font-weight: 600; }
+    .event-remove { color: #b91c1c; font-weight: 600; }
   </style>
 </head>
 <body>
   <main>
-    <h1>Product Lookup</h1>
-    <p class="subtitle">Search by barcode, SKU, or name to see a product's pipeline status.</p>
-    <form id="search-form">
-      <input id="q" type="text" placeholder="Barcode, SKU, or name…" autofocus />
-      <button type="submit">Search</button>
-    </form>
-    <div id="results"></div>
+    <h1>CBBC Admin</h1>
+
+    <nav class="tabs">
+      <button class="tab active" data-tab="products">Product Lookup</button>
+      <button class="tab" data-tab="brands">Brands</button>
+    </nav>
+
+    <section id="view-products" class="view">
+      <p class="subtitle">Search by barcode, SKU, or name to see a product's pipeline status.</p>
+      <form id="search-form">
+        <input id="q" type="text" placeholder="Barcode, SKU, or name…" autofocus />
+        <button type="submit">Search</button>
+      </form>
+      <div id="results"></div>
+    </section>
+
+    <section id="view-brands" class="view hidden">
+      <nav class="subtabs">
+        <button class="subtab active" data-subtab="whitelisted">Whitelisted</button>
+        <button class="subtab" data-subtab="catalog">All brands</button>
+        <button class="subtab" data-subtab="history">History</button>
+      </nav>
+
+      <div id="brand-search-wrap">
+        <input id="brand-q" type="text" placeholder="Search brands…" />
+      </div>
+      <div id="history-search-wrap" class="hidden">
+        <input id="history-q" type="text" placeholder="Filter history by brand…" />
+      </div>
+
+      <div id="brand-warning"></div>
+      <div id="brand-list"></div>
+    </section>
   </main>
 
   <script>
@@ -134,6 +205,231 @@
     }
 
     document.getElementById('search-form').addEventListener('submit', doSearch);
+
+    // ---------- Tabs ----------
+
+    const tabButtons = document.querySelectorAll('.tab');
+    const viewProducts = document.getElementById('view-products');
+    const viewBrands = document.getElementById('view-brands');
+
+    function switchTab(name) {
+      tabButtons.forEach((b) => b.classList.toggle('active', b.dataset.tab === name));
+      viewProducts.classList.toggle('hidden', name !== 'products');
+      viewBrands.classList.toggle('hidden', name !== 'brands');
+      if (name === 'brands' && !brandsLoaded) loadBrands();
+    }
+
+    tabButtons.forEach((b) => b.addEventListener('click', () => switchTab(b.dataset.tab)));
+
+    // ---------- Brand whitelist manager ----------
+
+    const subButtons = document.querySelectorAll('.subtab');
+    const brandQ = document.getElementById('brand-q');
+    const historyQ = document.getElementById('history-q');
+    const brandSearchWrap = document.getElementById('brand-search-wrap');
+    const historySearchWrap = document.getElementById('history-search-wrap');
+    const brandWarning = document.getElementById('brand-warning');
+    const brandList = document.getElementById('brand-list');
+
+    let whitelist = [];
+    let catalog = [];
+    let events = [];
+    let activeSubtab = 'whitelisted';
+    let brandsLoaded = false;
+
+    function esc(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    function normalize(s) {
+      return String(s || '').toLowerCase().replace(/_/g, ' ').replace(/\s+/g, ' ').trim();
+    }
+
+    function levenshtein(a, b) {
+      const m = a.length, n = b.length;
+      if (m === 0) return n;
+      if (n === 0) return m;
+      const dp = new Array(n + 1);
+      for (let j = 0; j <= n; j++) dp[j] = j;
+      for (let i = 1; i <= m; i++) {
+        let prev = dp[0];
+        dp[0] = i;
+        for (let j = 1; j <= n; j++) {
+          const tmp = dp[j];
+          dp[j] = Math.min(dp[j] + 1, dp[j - 1] + 1, prev + (a[i - 1] === b[j - 1] ? 0 : 1));
+          prev = tmp;
+        }
+      }
+      return dp[n];
+    }
+
+    function matchScore(query, target) {
+      const q = normalize(query);
+      const t = normalize(target);
+      if (!q) return 0;
+      if (t === q) return 0;
+      if (t.includes(q)) return 1;
+      if (q.length < 3) return Infinity;
+      const dist = levenshtein(q, t);
+      return dist <= 2 ? 2 + dist : Infinity;
+    }
+
+    function filterBrands(list, query) {
+      const q = normalize(query);
+      if (!q) return list;
+      return list
+        .map((b) => ({ b, s: matchScore(q, b.display_name) }))
+        .filter((x) => x.s !== Infinity)
+        .sort((x, y) => x.s - y.s)
+        .map((x) => x.b);
+    }
+
+    function switchSubtab(name) {
+      activeSubtab = name;
+      subButtons.forEach((b) => b.classList.toggle('active', b.dataset.subtab === name));
+      const isHistory = name === 'history';
+      brandSearchWrap.classList.toggle('hidden', isHistory);
+      historySearchWrap.classList.toggle('hidden', !isHistory);
+      renderBrands();
+    }
+
+    subButtons.forEach((b) => b.addEventListener('click', () => switchSubtab(b.dataset.subtab)));
+
+    brandQ.addEventListener('input', () => { if (activeSubtab !== 'history') renderBrands(); });
+    historyQ.addEventListener('input', () => { if (activeSubtab === 'history') renderBrands(); });
+
+    function whitelistRow(b) {
+      const notInFeed = b.in_catalog === false
+        ? ' <span class="badge warn">not in feed</span>'
+        : '';
+      return `
+        <div class="brand-row">
+          <div>
+            <span class="brand-name">${esc(b.display_name)}</span>
+            <span class="brand-key">${esc(b.brand_key)}</span>${notInFeed}
+          </div>
+          <div class="brand-actions">
+            <button class="small danger" data-remove="${esc(b.brand_key)}">Remove</button>
+          </div>
+        </div>`;
+    }
+
+    function catalogRow(b) {
+      const action = b.whitelisted
+        ? '<span class="badge live">whitelisted</span>'
+        : `<button class="small" data-add="${esc(b.brand_key)}">Add</button>`;
+      return `
+        <div class="brand-row">
+          <div>
+            <span class="brand-name">${esc(b.display_name)}</span>
+            <span class="brand-key">${esc(b.brand_key)}</span>
+          </div>
+          <div class="brand-actions">${action}</div>
+        </div>`;
+    }
+
+    function renderHistory() {
+      const q = normalize(historyQ.value);
+      const items = events.filter((ev) =>
+        !q || normalize(ev.brand_key).includes(q) || normalize(ev.display_name).includes(q)
+      );
+      if (items.length === 0) {
+        brandList.innerHTML = '<p class="empty">No history entries.</p>';
+        return;
+      }
+      brandList.innerHTML = items.map((ev) => {
+        const verb = ev.action === 'add' ? 'added' : 'removed';
+        const cls = ev.action === 'add' ? 'event-add' : 'event-remove';
+        return `
+          <div class="event">
+            <span class="${cls}">${esc(ev.actor || '?')} ${verb} ${esc(ev.display_name)}</span>
+            <span class="brand-key">${esc(ev.brand_key)}</span>
+            <div class="when">${new Date(ev.created_at).toLocaleString()}</div>
+          </div>`;
+      }).join('');
+    }
+
+    function renderBrands() {
+      if (activeSubtab === 'history') {
+        brandWarning.innerHTML = '';
+        renderHistory();
+        return;
+      }
+
+      brandWarning.innerHTML = '';
+      const isWhitelist = activeSubtab === 'whitelisted';
+
+      if (isWhitelist && whitelist.length === 0) {
+        brandWarning.innerHTML =
+          '<div class="warning-banner">The whitelist is empty — the pipeline will treat this as "allow all brands".</div>';
+      }
+
+      const list = isWhitelist ? whitelist : catalog;
+      const items = filterBrands(list, brandQ.value);
+
+      if (items.length === 0) {
+        brandList.innerHTML = `<p class="empty">${isWhitelist ? 'No whitelisted brands' : 'No brands'} match.</p>`;
+        return;
+      }
+
+      brandList.innerHTML = items.map(isWhitelist ? whitelistRow : catalogRow).join('');
+    }
+
+    brandList.addEventListener('click', async (e) => {
+      const addBtn = e.target.closest('[data-add]');
+      const rmBtn = e.target.closest('[data-remove]');
+      if (addBtn) return doAdd(addBtn.dataset.add);
+      if (rmBtn) return doRemove(rmBtn.dataset.remove);
+    });
+
+    async function doAdd(key) {
+      try {
+        const res = await fetch('/brands/whitelist', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ brand_key: key }),
+        });
+        if (!res.ok) throw new Error('add failed');
+        await loadBrands();
+      } catch (err) {
+        alert('Failed to add brand.');
+      }
+    }
+
+    async function doRemove(key) {
+      const ok = confirm(
+        'Remove this brand? WARNING: its products will be dropped on the next pipeline run and DELETED from the live Shopify store.'
+      );
+      if (!ok) return;
+      try {
+        const res = await fetch('/brands/whitelist/' + encodeURIComponent(key), { method: 'DELETE' });
+        if (!res.ok) throw new Error('remove failed');
+        await loadBrands();
+      } catch (err) {
+        alert('Failed to remove brand.');
+      }
+    }
+
+    async function loadBrands() {
+      try {
+        const [w, c, ev] = await Promise.all([
+          fetch('/brands/whitelist').then((r) => r.json()),
+          fetch('/brands/catalog').then((r) => r.json()),
+          fetch('/brands/events?limit=500').then((r) => r.json()),
+        ]);
+        whitelist = w;
+        catalog = c;
+        events = ev;
+        brandsLoaded = true;
+        renderBrands();
+      } catch (err) {
+        brandList.innerHTML = '<p class="empty">Failed to load brands.</p>';
+      }
+    }
   </script>
 </body>
 </html>
